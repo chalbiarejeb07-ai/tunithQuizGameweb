@@ -1,15 +1,20 @@
 {
-  "name": "project",
+  "name": "tunisia-guess-game",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22.6"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "check-env": "node scripts/check-env.mjs",
     "preview": "vite preview",
-    "create-admin": "node scripts/create-admin.mjs"
+    "lint": "oxlint",
+    "verify": "node scripts/verify.mjs",
+    "check-env": "node scripts/check-env.mjs",
+    "create-admin": "node scripts/create-admin.mjs",
+    "seed-quiz": "node scripts/seed-quiz.mjs"
   },
   "dependencies": {
     "firebase": "^12.19.0",
@@ -21,11 +26,9 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "firebase-admin": "^13.10.0",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
-  },
-  "optionalDependencies": {
-    "firebase-admin": "^13.10.0"
   }
 }

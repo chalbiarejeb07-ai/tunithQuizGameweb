@@ -13,6 +13,11 @@ dist-ssr
 *.local
 .env*.local
 
+# Clés Firebase Admin — ne JAMAIS committer (accès total au projet)
+service-account*.json
+*-firebase-adminsdk-*.json
+serviceAccountKey*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,39 +1,26 @@
-import { getApps, initializeApp, applicationDefault, cert } from 'firebase-admin/app'
+/**
+ * Crée (ou met à jour) le premier administrateur. Le rôle admin ne peut pas être
+ * attribué depuis le navigateur : les règles Firestore l'interdisent.
+ *
+ *   npm run create-admin -- admin@example.com "mot-de-passe" "Nom Admin"
+ *   npm run create-admin -- --email=… --password=… --display-name=… --credentials=…
+ */
 import { getAuth } from 'firebase-admin/auth'
-import { getFirestore, FieldValue } from 'firebase-admin/firestore'
-import { existsSync, readFileSync } from 'node:fs'
+import { FieldValue, getFirestore } from 'firebase-admin/firestore'
+import { initAdmin, parseArgs } from './adminApp.mjs'
 
-const positional = []
-const options = {}
-for (const argument of process.argv.slice(2)) {
-  const match = argument.match(/^--([^=]+)=(.*)$/)
-  if (match) options[match[1]] = match[2]
-  else positional.push(argument)
-}
-
+const { positional, options } = parseArgs()
 const email = options.email ?? positional[0]
 const password = options.password ?? positional[1]
 const displayName = options['display-name'] ?? positional[2] ?? 'Administrateur'
 const credentialsPath = options.credentials ?? positional[3]
 
 if (!email || !password) {
-  console.error('Usage: npm run create-admin -- --email=admin@example.com --password="mot-de-passe" [--display-name="Administrateur"] [--credentials="C:\\path\\service-account.json"]')
+  console.error('Usage: npm run create-admin -- --email=admin@example.com --password="mot-de-passe" [--display-name="Administrateur"] [--credentials="C:\\chemin\\service-account.json"]')
   process.exit(1)
 }
 
-const credentialFile = credentialsPath ?? process.env.GOOGLE_APPLICATION_CREDENTIALS
-const credential = credentialFile && existsSync(credentialFile)
-  ? cert(JSON.parse(readFileSync(credentialFile, 'utf8')))
-  : applicationDefault()
-
-let app
-try {
-  app = getApps()[0] ?? initializeApp({ credential })
-} catch (error) {
-  console.error('Impossible d’initialiser Firebase Admin. Fournissez GOOGLE_APPLICATION_CREDENTIALS ou passez le chemin du JSON en 4e argument.')
-  console.error(error instanceof Error ? error.message : error)
-  process.exit(1)
-}
+const app = initAdmin(credentialsPath)
 const auth = getAuth(app)
 const db = getFirestore(app)
 
@@ -55,4 +42,4 @@ await db.collection('Users').doc(user.uid).set({
   updatedAt: FieldValue.serverTimestamp(),
 }, { merge: true })
 
-console.log(`Compte admin prêt: ${email} (${user.uid})`)
+console.log(`Compte admin prêt : ${email} (${user.uid})`)

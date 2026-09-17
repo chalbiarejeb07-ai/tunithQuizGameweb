@@ -5,22 +5,18 @@ import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext'
 import { getMissingFirebaseConfigKeys } from './services/firebase'
 
-function FirebaseConfigError({ missingKeys }: { missingKeys: string[] }) {
-  return <main className="firebase-config-error">
-    <section className="firebase-config-panel" role="alert">
-      <p className="firebase-config-eyebrow">Configuration requise</p>
-      <h1>Firebase n’est pas configuré</h1>
-      <p>L’application est bloquée tant que ces variables d’environnement sont absentes ou vides :</p>
-      <ul>{missingKeys.map((key) => <li key={key}><code>{key}</code></li>)}</ul>
-      <p>Créez <code>.env.local</code> à partir de <code>.env.example</code>, puis remplacez les valeurs par celles de Firebase Console &gt; Paramètres du projet &gt; Vos applications.</p>
-      <p>Après toute modification de <code>.env.local</code>, redémarrez <code>npm run dev</code> : Vite ne recharge pas les variables d’environnement à chaud.</p>
-      <div className="firebase-config-commands"><code>cp .env.example .env.local</code><code>Copy-Item .env.example .env.local</code></div>
-    </section>
-  </main>
+// L'application démarre toujours, configurée ou non : le jeu local fonctionne
+// sans réseau et sans Firebase. L'absence de configuration est signalée dans
+// l'interface (bandeau « hors ligne »), elle ne bloque plus le démarrage.
+const missing = getMissingFirebaseConfigKeys()
+if (missing.length > 0) {
+  console.warn(`[firebase] configuration incomplète (${missing.join(', ')}) — mode hors ligne : authentification et sauvegarde désactivées, le jeu reste jouable.`)
 }
 
-const missingFirebaseConfig = getMissingFirebaseConfigKeys()
-const root = createRoot(document.getElementById('root')!)
-root.render(missingFirebaseConfig.length > 0
-  ? <FirebaseConfigError missingKeys={missingFirebaseConfig} />
-  : <StrictMode><AuthProvider><App /></AuthProvider></StrictMode>)
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </StrictMode>,
+)

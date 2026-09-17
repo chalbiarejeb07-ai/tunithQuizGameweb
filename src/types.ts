@@ -1,0 +1,12 @@
+export type Screen =
+  | 'splash'
+  | 'menu'
+  | 'setup'
+  | 'game'
+  | 'results'
+  | 'settings'
+  | 'profile'
+  | 'login'
+  | 'signup'
+  | 'admin'
+  | 'online'

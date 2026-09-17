@@ -2,40 +2,57 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+
     function isAdmin() {
       return signedIn() && get(/databases/$(database)/documents/Users/$(request.auth.uid)).data.get('role', '') == 'admin';
     }
-    function roleIsUnchanged() {
-      return request.resource.data.role == resource.data.role;
-    }
-    function isAdminPromotion() {
-      return isAdmin() && request.resource.data.role == 'admin';
-    }
-    function roleIsNotAdmin() {
-      return !('role' in request.resource.data) || request.resource.data.role != 'admin';
-    }
+
+    // `.get(champ, défaut)` évite l'erreur d'évaluation quand le document
+    // existant (ou le document entrant) ne porte pas encore de rôle.
+    function currentRole() { return resource.data.get('role', ''); }
+    function nextRole() { return request.resource.data.get('role', ''); }
+    function roleIsUnchanged() { return nextRole() == currentRole(); }
 
     match /Users/{userId} {
       allow read: if signedIn() && request.auth.uid == userId;
       allow read: if isAdmin();
-      allow create: if signedIn() && request.auth.uid == userId && roleIsNotAdmin();
-      allow update: if signedIn() && ((request.auth.uid == userId && roleIsUnchanged()) || isAdminPromotion());
+
+      // Un compte se crée lui-même, jamais avec le rôle admin.
+      allow create: if signedIn() && request.auth.uid == userId && nextRole() != 'admin';
+
+      // Chacun modifie son profil sans toucher à son rôle ; un administrateur
+      // modifie n'importe quel profil et ne peut que promouvoir (jamais
+      // rétrograder un rôle existant).
+      allow update: if signedIn() && (
+        (request.auth.uid == userId && roleIsUnchanged())
+        || (isAdmin() && (roleIsUnchanged() || nextRole() == 'admin'))
+      );
+
       allow delete: if isAdmin();
     }
 
     match /Quiz/{quizId} {
-      allow read: if signedIn();
+      // Le contenu du quiz est public : le mode invité doit pouvoir jouer.
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
     match /Games/{gameId} {
       allow read: if signedIn();
-      allow create: if signedIn();
+      // Une partie ne peut être enregistrée qu'au nom de son propre auteur.
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if isAdmin();
     }
 
+    // Salons multijoueur : tout l'état d'une partie tient dans un document, que
+    // tous les participants modifient (chacun n'écrit que son entrée, via la
+    // notation pointée côté client). La création est réservée à l'hôte déclaré,
+    // et seul l'hôte peut supprimer le salon.
     match /Rooms/{roomId} {
-      allow read, write: if signedIn();
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.hostUid == request.auth.uid;
+      allow update: if signedIn();
+      allow delete: if signedIn() && resource.data.hostUid == request.auth.uid;
     }
   }
 }
